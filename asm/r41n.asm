@@ -1,9 +1,38 @@
-format MZ
+; ==== Constants ====
+COLS equ 80
+ROWS equ 25
 
-entry main:start
+; ==== Types ====
+struc THREAD {
+  ; Y position of head character. May be larger than physical number of rows if offscreen.
+  .head_y db ?
+  ; Y position of tail character. May be negative if offscreen.
+  .tail_y db ?
+  ; Rate of growth (moving the head downwards by 1) in # of frames.
+  .grow_rate db ?
+  ; Rate of shrinkage (moving the tail downwards by 1) in # of frames.
+  .shrink_rate db ?
+  ; Current head character.
+  .head_char db ?
+  .padding_1 db ?
+}
+SIZEOF_THREAD equ 6
+
+struc COLUMN {
+  ; Bitmap of which threads are active.
+  .active_threads db 0
+  .padding_1 db ?
+  .threads 4 dup Thread
+}
+SIZEOF_COLUMN equ 26
+
+; ==== Code ====
+format mz
+
+entry _code:start
 stack 100h
 
-segment main
+segment _code
 
 start:
       mov ax, _data
@@ -14,7 +43,11 @@ start:
 
       mov si, 20
   start_1:
-      call rand
+      mov al, 1
+      mov ah, 10
+      push ax
+      call rand_in_range
+      add sp, 2
       push ax
       call print_number
       add sp, 2
@@ -134,7 +167,7 @@ rand_init:
       ret
 
 ; Fibonacci PRNG.
-; Returns a pseudo-random unsigned 8-bit integer in al.
+; Returns a pseudo-random 8-bit integer in al.
 rand:
       push bx
       mov bx, rand_seeds
@@ -153,10 +186,32 @@ rand:
       pop bx
       ret
 
+; Generates a pseudo-random 8-bit integer between [min, max] inclusive. 
+; Example:
+;    mov al, <min>
+;    mov ah, <max>
+;    push ax
+;    call rand_in_range
+; Result is stored in al.
+rand_in_range:
+      enter 0, 0
+      call rand
+      mov dx, 0
+      mov cl, [bp+5]
+      sub cl, [bp+4]
+      inc cl
+      mov ch, 0
+      div cx
+      mov al, dl
+      add al, [bp+4]
+      mov ah, 0
+      leave
+      ret
+
 ; Print a 16-bit unsigned integer for debugging.
 print_number:
-      ; 16 bit values have a max of 5 decimal digits (65535). We also reserve space for
-      ; newline and terminating '$'.
+      ; 16 bit values have a max of 5 decimal digits (65535). We also reserve
+      ; space for newline and terminating '$'.
       enter 8, 0
       ; ax = remainder to print
       ; bx = char* pointing to start of string on stack
@@ -195,8 +250,15 @@ exit:
       mov ax, 4c00h
       int 21h
 
+; ==== Data ====
 segment _data
 
 ; Fibonacci PRNG seeds
 rand_seeds: db 4 dup 0
+
+; Threads.
+threads_by_column: rb SIZEOF_COLUMN * COLS
+
+; Current frame number.
+frame: dw 0
 

@@ -26,7 +26,7 @@ interface Thread {
   tailY: number;
   /** Rate of growth (moving the head downwards by 1) in # of frames. */
   growRate: number;
-  /** Rate of  (moving the tail downwards by 1) in # of frames. */
+  /** Rate of shrinkage (moving the tail downwards by 1) in # of frames. */
   shrinkRate: number;
 }
 
