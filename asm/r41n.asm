@@ -120,26 +120,40 @@ next_frame:
       ret
 
 
-; Create new threads in each column as needed.
-create_threads:
+; Iterates over the the columns in threads_by_column.
+; Argument is a function to be invoked with
+;    - Address of COLUMN struct
+;    - x position of column
+for_each_column:
       enter 0, 0
       push bx
 
+      mov dx, [bp+4]  ; function to call
       mov cx, 0  ; loop counter
       mov bx, threads_by_column
-  create_threads_loop:
+  for_each_column_loop:
+      push dx
       push cx
       push bx
-      call create_thread
-      add sp, 2
+      call dx
+      pop bx
       pop cx
+      pop dx
       inc cx
       add bx, SIZEOF_COLUMN
       cmp cx, COLS
-      jne create_threads_loop
+      jne for_each_column_loop
 
       pop bx
       leave
+      ret
+
+
+; Create new threads in each column as needed.
+create_threads:
+      push create_thread
+      call for_each_column
+      add sp, 2
       ret
 
 ; Create threads in a particular column as needed.
@@ -271,24 +285,9 @@ can_create_thread:
 
 ; Destroy off screen threads in each column as needed.
 destroy_threads:
-      enter 0, 0
-      push bx
-
-      mov cx, 0  ; loop counter
-      mov bx, threads_by_column
-  destroy_threads_loop:
-      push cx
-      push bx
-      call destroy_thread
+      push destroy_thread
+      call for_each_column
       add sp, 2
-      pop cx
-      inc cx
-      add bx, SIZEOF_COLUMN
-      cmp cx, COLS
-      jne destroy_threads_loop
-
-      pop bx
-      leave
       ret
 
 ; Destroy threads in a particular column as needed.
@@ -582,41 +581,41 @@ print_char:
       ret
 
 ; Print a 16-bit unsigned integer for debugging.
-print_number:
-      ; 16 bit values have a max of 5 decimal digits (65535). We also reserve
-      ; space for newline and terminating '$'.
-      enter 8, 0
-      ; ax = remainder to print
-      ; bx = char* pointing to start of string on stack
-      ; di = 10
-      push bx
-      push di
-      mov ax, [bp+4]
-      mov bx, bp
-      sub bx, 3
-      mov byte [ss:bx], 0dh  ; '\r'
-      mov byte [ss:bx+1], 0ah  ; '\n'
-      mov byte [ss:bx+2], 24h  ; '$'
-      mov di, 10
-  print_number_1:
-      mov dx, 0
-      div di
-      add dx, 30h  ; '0'
-      dec bx
-      mov [ss:bx], dl
-      cmp ax, 0
-      jne print_number_1
-      push ds
-      mov ax, ss
-      mov ds, ax
-      mov dx, bx
-      mov ah, 09h
-      int 21h
-      pop ds
-      pop di
-      pop bx
-      leave
-      ret
+; print_number:
+;       ; 16 bit values have a max of 5 decimal digits (65535). We also reserve
+;       ; space for newline and terminating '$'.
+;       enter 8, 0
+;       ; ax = remainder to print
+;       ; bx = char* pointing to start of string on stack
+;       ; di = 10
+;       push bx
+;       push di
+;       mov ax, [bp+4]
+;       mov bx, bp
+;       sub bx, 3
+;       mov byte [ss:bx], 0dh  ; '\r'
+;       mov byte [ss:bx+1], 0ah  ; '\n'
+;       mov byte [ss:bx+2], 24h  ; '$'
+;       mov di, 10
+;   print_number_1:
+;       mov dx, 0
+;       div di
+;       add dx, 30h  ; '0'
+;       dec bx
+;       mov [ss:bx], dl
+;       cmp ax, 0
+;       jne print_number_1
+;       push ds
+;       mov ax, ss
+;       mov ds, ax
+;       mov dx, bx
+;       mov ah, 09h
+;       int 21h
+;       pop ds
+;       pop di
+;       pop bx
+;       leave
+;       ret
 
 ; Exits the program.
 exit:
@@ -627,10 +626,10 @@ exit:
 segment _data
 
 ; Fibonacci PRNG seeds
-rand_seeds: db 4 dup 0
+rand_seeds: rb 4
 
 ; Threads.
-threads_by_column: rb SIZEOF_COLUMN * COLS
+threads_by_column: db SIZEOF_COLUMN * COLS dup 0
 
 ; Current frame number.
 frame: dw 0
