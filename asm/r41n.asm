@@ -55,7 +55,9 @@ start:
       mov ds, ax
 
       call rand_init
+      call threads_init
       call set_video_mode
+      call next_tick
 
       mov cx, 0  ; Frame number
   start_1:
@@ -64,9 +66,7 @@ start:
       pop cx
       inc cx
 
-      push 1
-      call sleep_ticks
-      add sp, 2
+      call next_tick
 
       call check_keyboard
       jz start_1
@@ -149,6 +149,18 @@ for_each_column:
 
       pop bx
       leave
+      ret
+
+
+threads_init:
+      push bx
+      mov cx, (SIZEOF_COLUMN * COLS / 2)
+      mov bx, threads_by_column
+  threads_init_loop:
+      mov word [bx], 0
+      add bx, 2
+      loop threads_init_loop
+      pop bx
       ret
 
 
@@ -443,48 +455,23 @@ move_cursor:
       leave
       ret
 
-; Sleep a given number of CPU ticks (~55ms).
-; Example:
-;    push 10
-;    call sleep_ticks
-;    add sp, 2
-sleep_ticks:
-      enter 0, 0
+
+; Sleep until the next tick.
+next_tick:
       pusha
-      ; bx = remaining ticks to wait
-      ; si = higher 16 bits of current tick count
-      ; di = lower 16 bits of current tick count
-      mov bx, [bp+4]
-  sleep_ticks_1:
-      cmp bx, 0
-      je sleep_ticks_ret
-      push bx
+  next_tick_loop:
       mov ah, 0h
       int 1ah
-      pop bx
-      mov di, dx
-      mov si, cx
-  sleep_ticks_2:
-      push bx
-      push si
-      push di
+      cmp dx, [last_tick]
+      jne next_tick_ret
+      cmp cx, [last_tick+2]
+      jne next_tick_ret
       hlt
-      mov ah, 0h
-      int 1ah
-      pop di
-      pop si
-      pop bx
-      cmp dx, di
-      jne sleep_ticks_3
-      cmp cx, si
-      jne sleep_ticks_3
-      jmp sleep_ticks_2
-  sleep_ticks_3:
-      dec bx
-      jmp sleep_ticks_1
-  sleep_ticks_ret:
+      jmp next_tick_loop
+  next_tick_ret:
+      mov [last_tick], dx
+      mov [last_tick+2], cx
       popa
-      leave
       ret
 
 ; Check for key press (non-blocking).
@@ -655,9 +642,12 @@ SIZEOF_CHARS = $-CHARS
 ; Current frame number.
 frame: dw 0
 
+; Most recent tick count.
+last_tick: dd 0
+
 ; Fibonacci PRNG seeds
 rand_seeds: rb 4
 
 ; Threads.
-threads_by_column: rb SIZEOF_COLUMN * COLS
+threads_by_column: rb (SIZEOF_COLUMN * COLS)
 
