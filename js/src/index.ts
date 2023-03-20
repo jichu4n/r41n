@@ -2,7 +2,7 @@ import * as ansiEscapes from 'ansi-escapes';
 import * as ansiStyles from 'ansi-styles';
 
 // TODO: Make these configuration options.
-const FRAMERATE = 25;
+const FRAMERATE = 40;
 const COLS = process.stdout.columns;
 const ROWS = process.stdout.rows;
 const NEW_THREAD_RATE = 120;

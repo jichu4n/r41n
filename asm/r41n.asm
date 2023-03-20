@@ -7,6 +7,9 @@ MIN_THREAD_LENGTH equ 4
 MAX_THREAD_LENGTH equ 16
 MAX_GROW_RATE equ 4
 MIN_GROW_RATE equ 1
+HEAD_COLOR equ 00001111b  ; white on black
+COLOR equ 00000010b  ; green on black
+
 
 ; ==== Types ====
 struc THREAD {
@@ -348,11 +351,26 @@ update_thread:
       jne update_thread_shrink
 
       mov ch, [bx+THREAD.head_y]
-      cmp ch, ROWS-1
+      cmp ch, ROWS
       jge update_thread_shrink
+
+      mov [bx+THREAD.head_y], ch
+      mov cl, [bx+THREAD.x]
+      push cx
+      call move_cursor
+
+      add sp, 2
+      mov al, [bx+THREAD.head_char]
+      mov ah, COLOR
+      push ax
+      call print_char
+      add sp, 2
 
       inc ch
       mov [bx+THREAD.head_y], ch
+      cmp ch, ROWS
+      jge update_thread_shrink
+
       mov cl, [bx+THREAD.x]
       push cx
       call move_cursor
@@ -360,6 +378,7 @@ update_thread:
 
       call rand_char
       mov [bx+THREAD.head_char], al
+      mov ah, HEAD_COLOR
       push ax
       call print_char
       add sp, 2
@@ -385,7 +404,8 @@ update_thread:
       push cx
       call move_cursor
       add sp, 2
-      mov ax, 20h  ; ' '
+      mov al, 20h  ; ' '
+      mov ah, COLOR
       push ax
       call print_char
       add sp, 2
@@ -567,14 +587,17 @@ rand_char:
       ret
 
 ; Print a single character
-; Argument is character to print in lower 8 bits.
+; Arguments:
+;     - Color in upper 8 bits
+;     - Character to print in lower 8 bits
 print_char:
       enter 0, 0
       pusha
-      mov ax, [bp+4]
-      mov bx, 0
+      mov al, [bp+4]
+      mov bh, 0
+      mov bl, [bp+5]
       mov cx, 1
-      mov ah, 0ah
+      mov ah, 09h
       int 10h
       popa
       leave
