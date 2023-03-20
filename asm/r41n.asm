@@ -648,16 +648,16 @@ exit:
 ; ==== Data ====
 segment _data
 
-; Fibonacci PRNG seeds
-rand_seeds: rb 4
-
-; Threads.
-threads_by_column: db SIZEOF_COLUMN * COLS dup 0
+; Characters.
+CHARS: db 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*<>?:-=+|'
+SIZEOF_CHARS = $-CHARS
 
 ; Current frame number.
 frame: dw 0
 
-; Characters.
-CHARS: db 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*<>?:-=+|'
-SIZEOF_CHARS = $-CHARS
+; Fibonacci PRNG seeds
+rand_seeds: rb 4
+
+; Threads.
+threads_by_column: rb SIZEOF_COLUMN * COLS
 
