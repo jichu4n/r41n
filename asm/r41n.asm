@@ -191,9 +191,7 @@ create_thread:
       ; Randomize
       mov al, 1
       mov ah, NEW_THREAD_RATE
-      push ax
       call rand_in_range
-      add sp, 2
       cmp al, 1
       jne create_thread_ret
 
@@ -222,24 +220,18 @@ create_thread:
 
       mov al, MIN_THREAD_LENGTH
       mov ah, MAX_THREAD_LENGTH
-      push ax
       call rand_in_range
-      add sp, 2
       neg al
       mov [bx+si+THREAD.tail_y], al
 
       mov al, MIN_GROW_RATE
       mov ah, MAX_GROW_RATE
-      push ax
       call rand_in_range
-      add sp, 2
       mov [bx+si+THREAD.grow_rate], al
 
       ; al (min) is grow_rate
       mov ah, MAX_GROW_RATE
-      push ax
       call rand_in_range
-      add sp, 2
       mov [bx+si+THREAD.shrink_rate], al
 
       mov byte [bx+si+THREAD.head_char], 0
@@ -334,31 +326,26 @@ update_thread:
       call should_update_for_frame
       jne update_thread_shrink
 
-      mov ch, [bx+THREAD.head_y]
-      cmp ch, ROWS
+      mov dh, [bx+THREAD.head_y]
+      cmp dh, ROWS
       jge update_thread_shrink
 
-      mov cl, [bx+THREAD.x]
-      push cx
+      mov dl, [bx+THREAD.x]
       mov al, [bx+THREAD.head_char]
       mov ah, COLOR
-      push ax
       call print_char_at
-      add sp, 2
-      pop cx
 
-      inc ch
-      mov [bx+THREAD.head_y], ch
-      cmp ch, ROWS
+      inc dh
+      mov [bx+THREAD.head_y], dh
+      cmp dh, ROWS
       jge update_thread_shrink
 
-      push cx
+      push dx
       call rand_char
+      pop dx
       mov [bx+THREAD.head_char], al
       mov ah, HEAD_COLOR
-      push ax
       call print_char_at
-      add sp, 4
 
   update_thread_shrink:
       ; Check if we should shrink
@@ -366,20 +353,17 @@ update_thread:
       call should_update_for_frame
       jne update_thread_ret
 
-      mov ch, [bx+THREAD.tail_y]
-      inc ch
-      mov [bx+THREAD.tail_y], ch
-      cmp ch, ROWS
+      mov dh, [bx+THREAD.tail_y]
+      inc dh
+      mov [bx+THREAD.tail_y], dh
+      cmp dh, ROWS
       jge update_thread_ret
-      cmp ch, 0
+      cmp dh, 0
       jl update_thread_ret
-      mov cl, [bx+THREAD.x]
-      push cx
+      mov dl, [bx+THREAD.x]
       mov al, 20h  ; ' '
       mov ah, COLOR
-      push ax
       call print_char_at
-      add sp, 4
 
   update_thread_ret:
       pop bx
@@ -406,36 +390,26 @@ set_video_mode:
 
 ; Print character at location.
 ; Arguments:
-;     - Character to print in lower 8 bits, color in upper 8 bits
-;     - (x, y) in lower and upper 8 bits
+;     - al: Character to print
+;     - ah: Color
+;     - dl: x
+;     - dh: y
 ; Example:
-;    mov al, <x>
-;    mov ah, <y>
-;    push ax
-;    mov al, <char>
-;    mov ah, <color>
-;    push ax
-;    call print_char_at
-;    add sp, 4
 print_char_at:
-      enter 0, 0
       pusha
-
-      mov dl, [bp+6]
-      mov dh, [bp+7]
       mov bx, 0
       mov ah, 02h
       int 10h
+      popa
 
-      mov al, [bp+4]
+      pusha
       mov bh, 0
-      mov bl, [bp+5]
+      mov bl, ah
       mov cx, 1
       mov ah, 09h
       int 10h
-
       popa
-      leave
+
       ret
 
 
@@ -518,22 +492,22 @@ rand:
 ; Example:
 ;    mov al, <min>
 ;    mov ah, <max>
-;    push ax
 ;    call rand_in_range
 ; Result is stored in al.
 rand_in_range:
-      enter 0, 0
+      push bx
+      mov bx, ax
       call rand
-      mov dx, 0
-      mov cl, [bp+5]
-      sub cl, [bp+4]
+      mov cl, bh
+      sub cl, bl
       inc cl
       mov ch, 0
+      mov dx, 0
       div cx
       mov al, dl
-      add al, [bp+4]
+      add al, bl
       mov ah, 0
-      leave
+      pop bx
       ret
 
 ; Generates a random character for display.
@@ -543,9 +517,7 @@ rand_char:
 
       mov al, 0
       mov ah, (SIZEOF_CHARS - 1)
-      push ax
       call rand_in_range
-      add sp, 2
       mov ah, 0
 
       mov bx, CHARS
