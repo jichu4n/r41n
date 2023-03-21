@@ -72,6 +72,7 @@ start:
       call set_video_mode  ; Clear screen
       call exit
 
+
 ; Render next frame.
 next_frame:
       mov ax, create_thread
@@ -82,8 +83,10 @@ next_frame:
       call for_each_column
       ret
 
+; Arguments:
+;    - bx: Address of COLUMN struct for that column.
+;    - cx: X position of column.
 next_frame_for_column:
-      mov dx, ax  ; pointer to COLUMN struct
       mov ax, update_thread
       call for_each_thread
       ret
@@ -91,38 +94,28 @@ next_frame_for_column:
 
 ; Iterates over the the columns in threads_by_column.
 ; Argument in ax is a function to be invoked with
-;    - ax: Address of COLUMN struct
-;    - dx: x position of column
+;    - bx: Address of COLUMN struct
+;    - cx: x position of column
 for_each_column:
-      pusha
-      mov di, ax
-
       mov cx, (COLS-1)  ; loop counter
       mov bx, threads_by_column
   for_each_column_loop:
-      push cx
-      mov ax, bx
-      mov dx, cx
-      call di
-      pop cx
+      pusha
+      call ax
+      popa
       add bx, SIZEOF_COLUMN
       loop for_each_column_loop
-
-      popa
       ret
 
 
 ; Iterates over the active threads in a column.
 ; Arguments:
 ;     - ax: Function to be invoked with
-;         - Address of THREAD struct
-;         - Address of COLUMN struct
-;         - active_threads bitmask corresponding to this thread
-;     - dx: Address of COLUMN struct
+;         - si: Address of THREAD struct
+;         - bx: Address of COLUMN struct
+;         - ax: active_threads bitmask corresponding to this thread
+;     - bx: Address of COLUMN struct
 for_each_thread:
-      pusha
-
-      mov bx, dx  ; Address of COLUMN struct
       mov di, ax  ; Function to call
       mov cx, 4  ; loop counter
       mov ax, 1  ; bitmask
@@ -133,23 +126,14 @@ for_each_thread:
       and dl, al
       jz for_each_thread_end_loop
 
-      push cx
-      push ax
-      push bx
-      push si
+      pusha
       call di
-      pop si
-      pop bx
-      pop ax
-      pop cx
+      popa
   for_each_thread_end_loop:
       shl al, 1
       add si, SIZEOF_THREAD
       loop for_each_thread_loop
-
-      popa
       ret
-
 
 
 threads_init:
@@ -166,12 +150,11 @@ threads_init:
 
 ; Create threads in a particular column as needed.
 ; Arguments:
-;    - ax: Address of COLUMN struct for that column.
-;    - dx: X position of column.
+;    - bx: Address of COLUMN struct for that column.
+;    - cx: X position of column.
 create_thread:
       pusha
-      mov bx, ax  ; pointer to COLUMN struct
-      mov di, dx  ; X position of column
+      mov di, cx
 
       ; Check if this column is eligible
       call can_create_thread
@@ -268,85 +251,79 @@ can_create_thread:
 
 
 ; Destroy threads in a particular column as needed.
-; Argument is address of COLUMN struct for that column.
+; Arguments:
+;    - bx: Address of COLUMN struct for that column.
+;    - cx: X position of column.
 destroy_threads_in_column:
-      mov dx, ax  ; pointer to COLUMN struct
       mov ax, destroy_thread_in_column
       call for_each_thread
       ret
 
+; Arguments:
+;    - si: Address of THREAD struct
+;    - bx: Address of COLUMN struct
+;    - ax: active_threads bitmask corresponding to this thread
 destroy_thread_in_column:
-      enter 0, 0
-      push bx
-      push si
-      mov si, [bp+4]  ; address of THREAD struct
-      mov bx, [bp+6]  ; pointer to COLUMN struct
       cmp byte [si+THREAD.tail_y], ROWS
       jl destroy_thread_in_column_ret
-      mov ax, [bp+8] ; bitmask for the THREAD
       xor [bx+COLUMN.active_threads], al
   destroy_thread_in_column_ret:
-      pop si
-      pop bx
-      leave
       ret
 
 
 ; Grow and shrink a thread for a given frame number.
-; Arguments is pointer to THREAD struct
+; Arguments:
+;    - si: Address of THREAD struct
+;    - bx: Address of COLUMN struct
+;    - ax: active_threads bitmask corresponding to this thread
 update_thread:
-      enter 0, 0
-      push bx
-      mov bx, [bp+4]
 
   update_thread_grow:
       ; Check if we should grow
-      mov cl, [bx+THREAD.grow_rate]
+      mov cl, [si+THREAD.grow_rate]
       call should_update_for_frame
       jne update_thread_shrink
 
-      mov dh, [bx+THREAD.head_y]
+      mov dh, [si+THREAD.head_y]
       cmp dh, ROWS
       jge update_thread_shrink
 
-      mov dl, [bx+THREAD.x]
-      mov al, [bx+THREAD.head_char]
+      mov dl, [si+THREAD.x]
+      mov al, [si+THREAD.head_char]
       mov ah, COLOR
       call print_char_at
 
       inc dh
-      mov [bx+THREAD.head_y], dh
+      mov [si+THREAD.head_y], dh
       cmp dh, ROWS
       jge update_thread_shrink
 
       push dx
       call rand_char
       pop dx
-      mov [bx+THREAD.head_char], al
+      mov [si+THREAD.head_char], al
       mov ah, HEAD_COLOR
       call print_char_at
 
   update_thread_shrink:
       ; Check if we should shrink
-      mov cl, [bx+THREAD.shrink_rate]
+      mov cl, [si+THREAD.shrink_rate]
       call should_update_for_frame
       jne update_thread_ret
 
-      mov dh, [bx+THREAD.tail_y]
+      mov dh, [si+THREAD.tail_y]
       inc dh
-      mov [bx+THREAD.tail_y], dh
+      mov [si+THREAD.tail_y], dh
       cmp dh, ROWS
       jge update_thread_ret
       cmp dh, 0
       jl update_thread_ret
-      mov dl, [bx+THREAD.x]
+      mov dl, [si+THREAD.x]
       mov al, 20h  ; ' '
       mov ah, COLOR
       call print_char_at
 
   update_thread_ret:
-      pop bx
-      leave
       ret
 
 should_update_for_frame:
