@@ -371,7 +371,6 @@ print_char_at:
 
 ; Sleep until the next tick.
 next_tick:
-      pusha
   next_tick_loop:
       mov ah, 0h
       int 1ah
@@ -384,15 +383,14 @@ next_tick:
   next_tick_ret:
       mov [last_tick], dx
       mov [last_tick+2], cx
-      popa
       ret
+
 
 ; Check for key press (non-blocking).
 ; Result:
 ;    - Zero flag if no key pressed
 ;    - Non-zero flag if key pressed, ASCII value stored in al
 check_keyboard:
-      pusha
       mov ah, 01h
       int 16h
       jz check_keyboard_ret
@@ -401,12 +399,11 @@ check_keyboard:
       xor ah, ah
       cmp al, 0
   check_keyboard_ret:
-      popa
       ret
+
 
 ; Initializes our Fibonacci PRNG.
 rand_init:
-      pusha
       mov ah, 0h
       int 1ah
       cmp cx, 0
@@ -421,7 +418,6 @@ rand_init:
       mov bx, rand_seeds
       mov [bx], cx
       mov [bx+2], dx
-      popa
       ret
 
 ; Fibonacci PRNG.
@@ -429,17 +425,15 @@ rand_init:
 rand:
       push bx
       mov bx, rand_seeds
+      mov cx, 4
       mov al, [bx]
+  rand_loop:
       mov ah, [bx+1]
       add al, ah
       mov [bx], ah
-      mov ah, [bx+2]
-      add al, ah
-      mov [bx+1], ah
-      mov ah, [bx+3]
-      add al, ah
-      mov [bx+2], ah
-      mov [bx+3], al
+      inc bx
+      loop rand_loop
+      mov [bx-1], al
       mov ah, 0
       pop bx
       ret
@@ -474,7 +468,6 @@ rand_char:
       mov al, 0
       mov ah, (SIZEOF_CHARS - 1)
       call rand_in_range
-      mov ah, 0
 
       mov bx, CHARS
       add bx, ax
@@ -520,10 +513,12 @@ rand_char:
 ;       leave
 ;       ret
 
+
 ; Exits the program.
 exit:
       mov ax, 4c00h
       int 21h
+
 
 ; ==== Data ====
 segment _data
