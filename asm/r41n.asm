@@ -74,62 +74,56 @@ start:
 
 ; Render next frame.
 next_frame:
-      push create_thread
+      mov ax, create_thread
       call for_each_column
-      push next_frame_for_column
+      mov ax, next_frame_for_column
       call for_each_column
-      push destroy_threads_in_column
+      mov ax, destroy_threads_in_column
       call for_each_column
-      add sp, 6
       ret
 
 next_frame_for_column:
-      enter 0, 0
-      push word [bp+4]  ; pointer to COLUMN struct
-      push update_thread
+      mov dx, ax  ; pointer to COLUMN struct
+      mov ax, update_thread
       call for_each_thread
-      add sp, 4
-      leave
       ret
 
 
 ; Iterates over the the columns in threads_by_column.
-; Argument is a function to be invoked with
-;    - Address of COLUMN struct
-;    - x position of column
+; Argument in ax is a function to be invoked with
+;    - ax: Address of COLUMN struct
+;    - dx: x position of column
 for_each_column:
-      enter 0, 0
-      push bx
+      pusha
+      mov di, ax
 
       mov cx, (COLS-1)  ; loop counter
       mov bx, threads_by_column
   for_each_column_loop:
       push cx
-      push bx
-      call word [bp+4]
-      pop bx
+      mov ax, bx
+      mov dx, cx
+      call di
       pop cx
       add bx, SIZEOF_COLUMN
       loop for_each_column_loop
 
-      pop bx
-      leave
+      popa
       ret
 
 
 ; Iterates over the active threads in a column.
 ; Arguments:
-;     - Function to be invoked with
+;     - ax: Function to be invoked with
 ;         - Address of THREAD struct
 ;         - Address of COLUMN struct
 ;         - active_threads bitmask corresponding to this thread
-;     - Address of COLUMN struct
+;     - dx: Address of COLUMN struct
 for_each_thread:
-      enter 0, 0
-      push bx
-      push si
+      pusha
 
-      mov bx, [bp+6]  ; Address of COLUMN struct
+      mov bx, dx  ; Address of COLUMN struct
+      mov di, ax  ; Function to call
       mov cx, 4  ; loop counter
       mov ax, 1  ; bitmask
       lea si, [bx+COLUMN.threads]  ; pointer to thread
@@ -143,7 +137,7 @@ for_each_thread:
       push ax
       push bx
       push si
-      call word [bp+4]
+      call di
       pop si
       pop bx
       pop ax
@@ -153,9 +147,7 @@ for_each_thread:
       add si, SIZEOF_THREAD
       loop for_each_thread_loop
 
-      pop si
-      pop bx
-      leave
+      popa
       ret
 
 
@@ -174,18 +166,15 @@ threads_init:
 
 ; Create threads in a particular column as needed.
 ; Arguments:
-;    - X position of column.
-;    - Address of COLUMN struct for that column.
+;    - ax: Address of COLUMN struct for that column.
+;    - dx: X position of column.
 create_thread:
-      enter 0, 0
-      push bx
-      push si
-      mov bx, [bp+4]  ; pointer to COLUMN struct
+      pusha
+      mov bx, ax  ; pointer to COLUMN struct
+      mov di, dx  ; X position of column
 
       ; Check if this column is eligible
-      push bx
       call can_create_thread
-      add sp, 2
       cmp al, 0
       je create_thread_ret
       ; Randomize
@@ -213,7 +202,7 @@ create_thread:
       or [bx+COLUMN.active_threads], ah
 
       ; bx+si point to the THREAD struct to update
-      mov cx, [bp+6]
+      mov cx, di
       mov [bx+si+THREAD.x], cl
 
       mov byte [bx+si+THREAD.head_y], -1
@@ -237,19 +226,14 @@ create_thread:
       mov byte [bx+si+THREAD.head_char], 0
 
   create_thread_ret:
-      pop si
-      pop bx
-      leave
+      popa
       ret
 
 ; Check whether we can create a new thread in a given column.
-; Argument is address of COLUMN struct.
+; Assumes bx is address of COLUMN struct.
 ; Returns result as boolean in al.
 can_create_thread:
-      enter 0, 0
-      push bx
       push si
-      mov bx, [bp+4]
 
       ; If all 4 threads are active, there's no space to create another one.
       mov dl, [bx+COLUMN.active_threads]
@@ -280,20 +264,15 @@ can_create_thread:
       mov ax, 0
   can_create_thread_ret:
       pop si
-      pop bx
-      leave 
       ret
 
 
 ; Destroy threads in a particular column as needed.
 ; Argument is address of COLUMN struct for that column.
 destroy_threads_in_column:
-      enter 0, 0
-      push word [bp+4]  ; pointer to COLUMN struct
-      push destroy_thread_in_column
+      mov dx, ax  ; pointer to COLUMN struct
+      mov ax, destroy_thread_in_column
       call for_each_thread
-      add sp, 4
-      leave
       ret
 
 destroy_thread_in_column:
