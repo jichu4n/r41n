@@ -1,3 +1,8 @@
+; ========================================
+; Digital rain demo
+; 16-bit FASM version for MS-DOS on 80186
+; ========================================
+
 ; ==== Constants ====
 COLS equ 80
 ROWS equ 25
