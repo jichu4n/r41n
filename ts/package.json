@@ -15,7 +15,7 @@
   "license": "ISC",
   "dependencies": {
     "ansi-escapes": "^4.3.2",
-    "ansi-styles": "^5.2.0"
+    "ansi-styles": "^6.2.1"
   },
   "devDependencies": {
     "@types/node": "^20.12.11",
