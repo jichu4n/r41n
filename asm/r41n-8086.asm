@@ -1,6 +1,6 @@
 ; ========================================
 ; Digital rain demo
-; 16-bit FASM version for MS-DOS on 80186
+; 16-bit FASM version for MS-DOS on 8086
 ; ========================================
 
 ; ==== Constants ====
