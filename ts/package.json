@@ -1,7 +1,7 @@
 {
   "name": "r41n",
   "version": "1.0.0",
-  "description": "Matrix digital rain demo in the terminal",
+  "description": "Matrix digital rain effect in the terminal",
   "main": "dist/index.js",
   "bin": {
     "r41n": "dist/index.js"

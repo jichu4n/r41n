@@ -1,0 +1,32 @@
+name: build
+on: [push, pull_request]
+jobs:
+  build-ts:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ts
+    strategy:
+      matrix:
+        node-version: [20]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm install
+      - run: npm run build
+  build-asm:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./asm
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt update && sudo apt install -y fasm
+      - run: ./build.sh && ls -lh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r41n-build
+          path: asm/r41n-*.exe
+          if-no-files-found: error

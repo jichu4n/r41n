@@ -18,4 +18,4 @@ To build, use the [flat assembler (fasm)](https://flatassembler.net/). The compi
 
 ## TypeScript
 
-A TypeScript implementation for Node.js is included in [./js](https://github.com/jichu4n/r41n/blob/master/js/).
+A TypeScript implementation for Node.js is included in [./ts](https://github.com/jichu4n/r41n/blob/master/ts/).
