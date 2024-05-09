@@ -1,6 +1,6 @@
 # r41n
 
-"The Matrix" digital rain effect in 8086 assembly.
+The iconic digital rain effect from _The Matrix_ series, in ~700 bytes of 8086 assembly.
 
 In DOSBox:
 
