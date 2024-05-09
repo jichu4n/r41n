@@ -4,3 +4,6 @@ updates:
     directory: '/ts'
     schedule:
       interval: 'weekly'
+    ignore:
+      - dependency-name: 'ansi-styles' # Later versions switch to ESM
+      - dependency-name: 'ansi-escapes' # Later versions switch to ESM
