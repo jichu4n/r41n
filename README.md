@@ -16,6 +16,8 @@ The implementation can be found in [./asm](https://github.com/jichu4n/r41n/blob/
 
 To build, use the [flat assembler (fasm)](https://flatassembler.net/). The result is a 16-bit executable that can run on MS-DOS, early versions of Windows (up to XP), and in DOSBox.
 
+Press any key to exit.
+
 ## TypeScript
 
-A TypeScript implementation for Node.js is included in [./ts](https://github.com/jichu4n/r41n/blob/master/ts/).
+A TypeScript implementation for Node.js is included in [./ts](https://github.com/jichu4n/r41n/blob/master/ts/). Press Ctrl-C to exit.
